@@ -522,6 +522,7 @@ members = [
 	"templates/parachain/node",
 	"templates/parachain/pallets/template",
 	"templates/parachain/runtime",
+	"templates/parachain/runtime/fuzz",
 	"templates/solochain/node",
 	"templates/solochain/pallets/template",
 	"templates/solochain/runtime",

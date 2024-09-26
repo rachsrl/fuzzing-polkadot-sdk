@@ -49,6 +49,9 @@
 
 pub use pallet::*;
 
+use codec::{Encode, Decode};
+use sp_runtime::RuntimeDebug;
+
 #[cfg(test)]
 mod mock;
 
@@ -60,7 +63,6 @@ pub mod weights;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/polkadot_sdk/frame_runtime/index.html>
 // <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html>
 //
 // To see a full list of `pallet` macros and their use cases, see:
@@ -97,11 +99,23 @@ pub mod pallet {
 		pub(crate) block_number: BlockNumberFor<T>,
 	}
 
+	// Define the Proposal struct
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, RuntimeDebug, PartialEq, Eq)]
+	#[scale_info(skip_type_params(T))]
+	pub struct Proposal {
+    		pub votes_for: u32,
+    		pub votes_against: u32,
+	}
+
 	/// The pallet's storage items.
 	/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#storage>
 	/// <https://paritytech.github.io/polkadot-sdk/master/frame_support/pallet_macros/attr.storage.html>
 	#[pallet::storage]
 	pub type Something<T: Config> = StorageValue<_, CompositeStruct<T>>;
+	/// Storage item for voting on proposals functionality
+	#[pallet::storage]
+	#[pallet::getter(fn proposals)]
+	pub type Proposals<T> = StorageMap<_, Blake2_128Concat, u32, Proposal>;
 
 	/// Pallets use events to inform users when important changes are made.
 	/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#event-and-error>
@@ -110,7 +124,11 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// We usually use passive tense for events.
 		SomethingStored { block_number: BlockNumberFor<T>, who: T::AccountId },
+		/// Event for vote casted
+		// VoteCast { who: T::AccountId, proposal_id: Proposals<T>, vote_value: u32}, 
+		VoteCast(T::AccountId, u32, bool),
 	}
+
 
 	/// Errors inform users that something went wrong.
 	/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#event-and-error>
@@ -120,6 +138,10 @@ pub mod pallet {
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+		/// Error to throw in case of proposal not found
+		ProposalNotFound,
+		/// Error to throw when Vote overflows
+		VoteOverflow,
 	}
 
 	#[pallet::hooks]
@@ -182,5 +204,28 @@ pub mod pallet {
 				},
 			}
 		}
+
+		/// Allows a user to cast a vote on a specified proposal.
+		/// Increments the vote count for the proposal based on the user's vote value,
+		/// where `votes_for` indicates support for the proposal and `votes_against` indicates opposition.
+                #[pallet::call_index(2)]
+    		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().reads_writes(1,1))]
+		pub fn vote(origin: OriginFor<T>, proposal_id: u32, vote_value: bool) -> DispatchResult {
+			let voter = ensure_signed(origin)?;
+            		let mut proposal = Proposals::<T>::get(proposal_id).unwrap();
+
+            		if vote_value {
+            			proposal.votes_for = proposal.votes_for.checked_add(1).ok_or(Error::<T>::VoteOverflow)?;
+			} else {
+            			proposal.votes_against = proposal.votes_against.checked_add(1).ok_or(Error::<T>::VoteOverflow)?;
+			}
+
+            		// Save the updated proposal back to storage
+           	 	Proposals::<T>::insert(proposal_id, proposal);
+
+            		// Emit the event
+	    		Self::deposit_event(Event::VoteCast(voter, proposal_id, vote_value));
+	    		Ok(())
+		}	
 	}
 }
