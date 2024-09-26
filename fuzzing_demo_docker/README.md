@@ -1,54 +1,56 @@
-## Fuzzing Steps using Docker 
+## Steps to Fuzz using Docker 
 
-1. Get the Dockerfile
+1. Clone the repo
+```bash
+# git clone https://github.com/rachsrl/fuzzing-polkadot-sdk.git
+```
 
 2. Build the docker image
 ```bash
-docker build -t fuzzing-demo .
+# cd fuzzing-polkadot-sdk/fuzzing_demo_docker
+# docker build -t ziggy .
 ```
 
-3. Run the docker image in an interactive shell
+3. Run the docker image. Provide absolute path to the `fuzzing-polkadot-sdk` repo
 ```bash
-docker run -it fuzzing-demo
+# docker run -it -v /path/to/fuzzing-polkadot-sdk:/target ziggy
 ```
-
-You should now be in `fuzzing-polkadot-sdk` directory
 
 4. Fuzz the solochain-template
 ```bash
-cd /templates/solochain/runtime/fuzz
-SKIP_WASM_BUILD=1 cargo ziggy fuzz -j 4 --no-honggfuzz
+# cd target/templates/solochain/runtime/fuzz
+# cargo ziggy fuzz -j 4 --no-honggfuzz -G 32
 ``` 
 
-## Fuzzing steps without using Docker
+## Steps to fuzz without Docker
 
 1. Install Rust
 ```bash
-curl --proto '=https’ --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup install nightly
-rustup default nightly
-rustup target add wasm32-unknown-unknown
+# curl --proto '=https’ --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# rustup install nightly
+# rustup default nightly
+# rustup target add wasm32-unknown-unknown
 ```
 
 2. Install fuzzing tools (ziggy, AFL++, Honggfuzz and grcov)
 ```bash
-cargo install ziggy 
-cargo-afl honggfuzz grcov
+# cargo install ziggy 
+# cargo-afl honggfuzz grcov
 ```
 
 3. Clone the repo
 ```bash
-git clone https://github.com/rachsrl/fuzzing-polkadot-sdk.git -b fuzzing_demo 
+# git clone https://github.com/rachsrl/fuzzing-polkadot-sdk.git 
 ```
 
 4. Fuzz the solochain-template
 ```bash
-cd fuzzing-polkadot-sdk/templates/solochain/runtime/fuzz
-cargo-afl afl system-config
-SKIP_WASM_BUILD=1 cargo ziggy fuzz -j 4 --no-honggfuzz
+# cd fuzzing-polkadot-sdk/templates/solochain/runtime/fuzz
+# cargo-afl afl system-config
+# cargo ziggy fuzz -j 4 --no-honggfuzz -G 32
 ```
 
-## Analysing the crash
+## Analyzing the crash
 
 ```bash
 cargo ziggy run -i output/solochain-template-fuzzer/crashes/<directory_name>
