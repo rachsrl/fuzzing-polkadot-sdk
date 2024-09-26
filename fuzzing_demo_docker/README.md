@@ -32,8 +32,7 @@ rustup target add wasm32-unknown-unknown
 
 2. Install fuzzing tools (ziggy, AFL++, Honggfuzz and grcov)
 ```bash
-cargo install ziggy 
-cargo-afl honggfuzz grcov
+cargo install ziggy cargo-afl honggfuzz grcov
 ```
 
 3. Clone the repo
